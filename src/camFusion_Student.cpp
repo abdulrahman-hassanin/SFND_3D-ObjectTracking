@@ -133,10 +133,33 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
-    // ...
+	vector<double> distances;
+    double mean_dist = 0;
+    double dist =0;
+    for (cv::DMatch m : kptMatches) {
+    	cv::KeyPoint pPrev = kptsPrev[m.queryIdx];
+    	cv::KeyPoint pCurr = kptsCurr[m.trainIdx];
+
+        dist = sqrt(pow(pPrev.pt.x - pCurr.pt.x, 2) + pow(pPrev.pt.y - pCurr.pt.y, 2));
+        mean_dist += dist;
+    	distances.push_back(dist);
+    }
+
+    mean_dist /= distances.size();
+    double stdev = 0.0;
+    for (double d : distances) {
+    	stdev += pow(d - mean_dist, 2);
+    }
+    stdev = sqrt(stdev / distances.size());
+
+    for (int i = 0; i < kptMatches.size(); i++) {
+    	if (abs(distances[i] - mean_dist) < stdev) {
+    		boundingBox.kptMatches.push_back(kptMatches[i]);
+    	}
+    }
 }
 
-double getMedian(vector<double> v)
+double getMedian(std::vector<double> v)
 {
     double median = 0.0;
     int size = v.size();
@@ -223,12 +246,13 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
     for(LidarPoint p : lidarPointsPrev)
         dPrev.push_back(p.x);
-    for(lidarPoint p : LidarPointsCurr)
+    for(LsidarPoint p : lidarPointsCurr)
         dCurr.push_back(p.x);
 
-    double d0 = getMedian(dPrev);
-    double d1 = getMedian(dCurr);
-    double dt = 1/frameRate;
+    double d0, d1, dt;
+    d0 = getMedian(dPrev);
+    d1 = getMedian(dCurr);
+    dt = 1/frameRate;
 
     TTC = d1 * dt / (d0 - d1);
 }
