@@ -154,5 +154,59 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
-    // ...
+    std::multimap<int, int> mmap;
+    int maxPrevBoxID = 0;
+    // Dmatch contains two keypoint indices, queryIdx and trainIdx base in the oreder of image argument to match
+    for(auto match : matches){
+        cv::KeyPoint prevKP = prevFrame.keypoints[match.queryIdx];
+        cv::KeyPoint currKP = currFrame.keypoints[match.trainIdx];
+
+        int prevBoxID, currBoxID = -1;
+
+        // find it in each bounding box in prev frame
+        for(auto bBox : prevFrame.boundingBoxes){
+            if(bBox.roi.contains(prevKP.pt)){
+                prevBoxID = bBox.boxID;
+            }    
+        }
+        // find it in each bounding box in curr frame
+        for(auto bBox : currFrame.boundingBoxes){
+            if(bBox.roi.contains(currKP.pt)){
+                currBoxID = bBox.boxID;
+            }
+        }
+        mmap.insert({prevBoxID, currBoxID});
+        maxPrevBoxID = std::max(maxPrevBoxID, prevBoxID);
+    }
+
+    // Setup a list of boxID int values to iterate over in the current frame
+    vector<int> currFrameBoxIDs {};
+    for (auto box : currFrame.boundingBoxes) 
+        currFrameBoxIDs.push_back(box.boxID);
+
+    // Loop through each boxID in the current frame, and get the mode (most frequent value) of associated boxID for the previous frame.
+    for (int k : currFrameBoxIDs) {
+        // Count the greatest number of matches in the multimap, where each element is {key=currBoxID, val=prevBoxID}
+        // std::multimap::equal_range(k) returns the range of all elements matching key = k.
+        auto rangePrevBoxIDs = mmap.equal_range(k);
+
+        // Create a vector of counts (per current bbox) of prevBoxIDs
+        std::vector<int> counts(maxPrevBoxID + 1, 0);
+
+        // Accumulator loop
+        for (auto it = rangePrevBoxIDs.first; it != rangePrevBoxIDs.second; ++it) {
+            if (-1 != (*it).second) 
+                counts[(*it).second] += 1;
+        }
+
+        // Get the index of the maximum count (the mode) of the previous frame's boxID
+        int modeIndex = std::distance(counts.begin(), std::max_element(counts.begin(), counts.end()));
+
+        // Set the best matching bounding box map with
+        // key   = Previous frame's most likely matching boxID
+        // value = Current frame's boxID, k
+        bbBestMatches.insert({modeIndex, k});
+    }
+
+
 }
