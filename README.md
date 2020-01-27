@@ -33,3 +33,23 @@ In this final project, you will implement the missing parts in the schematic. To
 2. Make a build directory in the top level project directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./3D_object_tracking`.
+
+
+### FP.1 
+1. I have used a map where the key is the index of the previous frame bounding box, and the value is another map where the key is the index of current frame bounding box and the value is the counts.
+2. Then I try to find which bounding boxes each of the ends of the match belong to and update respective count if both ends were matched with the boxes
+3. Select the box from the current frame with the highest counts.
+
+### FP.2
+I have took the median x-distance to reduce the impact of outlier lidar points on TTC estimate instead of closest point.
+
+### FP.3
+I have calculated the mean and standard deviation of the distribution of distances between matched points. After that I’ve avoided all points far away from the mean.
+
+### FP.4
+I have used median value for distance ratios here as well to mitigate the outliers proble
+
+### FP.5
+
+### FP.6
+See the resluts in `result.csv` file.
