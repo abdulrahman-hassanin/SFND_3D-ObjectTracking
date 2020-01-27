@@ -156,7 +156,7 @@ int main(int argc, const char *argv[])
         {
             detKeypointsShiTomasi(keypoints, imgGray, false);
         }
-        if(detectorType.compare("HARRIS") == 0)
+        else if(detectorType.compare("HARRIS") == 0)
         {
             detKeypointsShiTomasi(keypoints, imgGray, false);
         }

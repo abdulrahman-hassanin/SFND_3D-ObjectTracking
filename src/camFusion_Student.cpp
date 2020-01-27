@@ -257,7 +257,7 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     TTC = d1 * dt / (d0 - d1);
 }
 
-void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
+/*void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
     std::multimap<int, int> mmap;
     int maxPrevBoxID = 0;
@@ -314,4 +314,51 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
     }
 
 
+}*/
+
+void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
+{
+	// bbBestMatches - prevFrame to currFrame
+	map<int, map<int, int>> counts;
+    for (cv::DMatch match : matches) {
+    	cv::KeyPoint query = prevFrame.keypoints[match.queryIdx];
+    	bool query_found = false;
+    	int query_pos, train_pos;
+    	cv::KeyPoint train = currFrame.keypoints[match.trainIdx];
+    	bool train_found = false;
+    	for (int i = 0; i < prevFrame.boundingBoxes.size(); i++) {
+    		if (prevFrame.boundingBoxes[i].roi.contains(cv::Point(query.pt.x, query.pt.y))) {
+    			query_found = true;
+    			query_pos = i;
+    			break;
+    		}
+    	}
+    	for (int i = 0; i < currFrame.boundingBoxes.size(); i++) {
+    		if (currFrame.boundingBoxes[i].roi.contains(cv::Point(train.pt.x, train.pt.y))) {
+    			train_found = true;
+    			train_pos = i;
+    			break;
+    		}
+    	}
+    	if (query_found && train_found) {
+    		if (counts.count(query_pos) == 1) {
+    			counts[query_pos][train_pos] += 1;
+    		} else {
+    			counts[query_pos][train_pos] = 1;
+    		}
+    	}
+    }
+    for (auto c : counts) {
+    	int max = 0;
+    	int value = -1;
+    	for (auto m : c.second) {
+    		if (m.second > max) {
+    			max = m.second;
+    			value = m.first;
+    		}
+    	}
+    	if (value != -1) {
+    		bbBestMatches[c.first] = value;
+    	}
+    }
 }
